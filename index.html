@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>App Venecia - Control Total</title>
+
+<style>
+    /* Estilos Base para modo App */
+    body {
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background-color: #0d0d0d;
+        color: #e0e0e0;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden; /* Evita scroll doble */
+    }
+
+    /* Título Principal Fijo Arriba */
+    .app-header {
+        text-align: center;
+        padding: 15px 0;
+        background-color: #1a1a1a;
+        border-bottom: 1px solid #d4af37;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        z-index: 100;
+    }
+    .app-header h1 {
+        color: #d4af37;
+        font-size: 1.1em;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        margin: 0;
+        font-weight: 900;
+    }
+
+    /* Contenedor Principal de Contenido (Scrollable) */
+    .content-container {
+        flex: 1;
+        overflow-y: auto;
+        padding-bottom: 90px; /* Espacio extra para la barra inferior */
+        scroll-behavior: smooth;
+    }
+
+    /* Contenedores de cada sección (Tabs) */
+    .tab-content {
+        display: none; /* Oculto por defecto */
+        padding: 20px;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: all 0.3s ease;
+    }
+
+    .tab-content.active {
+        display: block; /* Solo se muestra la sección activa */
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    /* Estilo de Tarjetas de Bienvenida (Temporales) */
+    .welcome-card {
+        background: linear-gradient(145deg, #1a1a1a, #111);
+        padding: 30px 20px;
+        border-radius: 15px;
+        border: 1px solid #333;
+        text-align: center;
+        margin-top: 20px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    .welcome-card h2 {
+        color: #fff;
+        font-size: 1.3em;
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+    .welcome-card p {
+        color: #aaa;
+        font-size: 0.9em;
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    /* --- BARRA DE NAVEGACIÓN INFERIOR ESTILO APP --- */
+    .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 80px; /* Altura ideal */
+        background-color: #1a1a1a;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        border-top: 1px solid #d4af37;
+        box-shadow: 0 -3px 15px rgba(0,0,0,0.6);
+        z-index: 1000;
+        padding: 0 10px;
+        box-sizing: border-box;
+    }
+
+    /* Botón individual de la barra */
+    .nav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #888; /* Gris inactivo */
+        background: none;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        padding: 0;
+        height: 100%;
+        position: relative;
+        -webkit-tap-highlight-color: transparent; /* Evita destello gris en iOS */
+    }
+
+    /* Indicador sutil arriba del botón activo */
+    .nav-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 3px;
+        background-color: #d4af37;
+        transition: width 0.3s ease;
+        border-radius: 0 0 5px 5px;
+    }
+
+    /* Estilos cuando el botón está ACTIVO */
+    .nav-item.active {
+        color: #d4af37; /* Texto Dorado */
+    }
+    .nav-item.active::before {
+        width: 40px; /* Muestra la línea dorada */
+    }
+
+    /* --- ESTILO CORRECTO PARA LOS EMOJIS (Imágenes) --- */
+    .nav-icon {
+        width: 38px;  /* Tamaño grande y definido */
+        height: 38px;
+        margin-bottom: 3px;
+        object-fit: contain; 
+        display: block;
+        transition: transform 0.3s ease;
+        filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); 
+    }
+
+    /* Pequeña animación de pulso al tocar el botón activo */
+    .nav-item.active .nav-icon {
+        transform: scale(1.1);
+    }
+
+    /* Texto debajo del emoji */
+    .nav-label {
+        font-size: 0.72em;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+    }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+    <h1>VENECIA CONTROL</h1>
+</header>
+
+<div class="content-container">
+    
+    <div id="taxis" class="tab-content active">
+        <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+        <style>
+            .taxis-body { font-family: 'Segoe UI', sans-serif; background-color: #050505; color: #e0e0e0; margin: 0; padding: 10px; }
+            .taxis-header { text-align: center; padding: 10px 0; border-bottom: 1px solid #d4af37; margin-bottom: 15px; }
+            .taxis-header h1 { color: #d4af37; font-size: 1.1em; text-transform: uppercase; letter-spacing: 2px; margin: 0; }
+            
+            .filter-section { background: #111; padding: 12px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #222; }
+            label { font-size: 0.7em; color: #d4af37; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 4px; }
+            select, input { width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #333; background: #000; color: white; margin-bottom: 10px; box-sizing: border-box; font-size: 0.85em; }
+            
+            .card-stats { display: flex; gap: 8px; margin-bottom: 15px; }
+            .stat { flex: 1; background: #161616; padding: 8px; border-radius: 8px; border: 1px solid #333; text-align: center; }
+            .stat span { display: block; font-size: 0.55em; color: #888; text-transform: uppercase; margin-bottom: 2px; font-weight: bold; }
+            .stat b { font-size: 0.95em; color: #d4af37; }
+
+            .sub-filtros { display: none; flex-direction: column; }
+            .info-semana { font-size: 0.8em; color: #d4af37; text-align: center; margin-bottom: 10px; font-weight: bold; }
+
+            .tabla-socios { width: 100%; border-collapse: collapse; font-size: 0.8em; background: #111; border-radius: 8px; overflow: hidden; table-layout: fixed; margin-bottom: 25px; }
+            .tabla-socios th { background: #d4af37; color: black; padding: 8px 4px; text-align: center; text-transform: uppercase; font-size: 0.65em; }
+            .tabla-socios td { padding: 10px 4px; border-bottom: 1px solid #222; text-align: center; word-wrap: break-word; }
+            .total-row { background: #1a1a1a; font-weight: bold; color: white; border-top: 2px solid #d4af37; }
+            
+            .ranking-title { color: #d4af37; font-size: 1.2em; text-transform: uppercase; text-align: center; margin: 30px 0 15px; font-weight: bold; letter-spacing: 2px; }
+            
+            .casa-box { background: #1a1a1a; border: 1px dashed #d4af37; border-radius: 10px; padding: 12px; margin-bottom: 15px; text-align: center; }
+            .casa-box h4 { margin: 0 0 5px 0; color: #d4af37; font-size: 0.8em; text-transform: uppercase; }
+            .casa-box p { margin: 0; font-size: 1em; font-weight: bold; }
+
+            .podium-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+            
+            .rank-card { 
+                position: relative;
+                background: linear-gradient(145deg, #1a1a1a, #0a0a0a);
+                border-radius: 15px; 
+                padding: 18px; 
+                display: flex; 
+                align-items: center; 
+                justify-content: space-between; 
+                border: 1px solid #333;
+                overflow: hidden;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            }
+
+            .rank-card.oro { 
+                border: 1px solid #d4af37; 
+                background: linear-gradient(145deg, #2a2208, #0a0a0a);
+                transform: scale(1.02);
+                box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+            }
+            .rank-card.oro::after {
+                content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+                background: radial-gradient(circle, rgba(212,175,55,0.1) 0%, transparent 70%);
+                pointer-events: none;
+            }
+
+            .rank-avatar {
+                width: 50px; height: 50px; border-radius: 50%;
+                background: #222; display: flex; align-items: center; justify-content: center;
+                font-weight: bold; font-size: 1.2em; border: 2px solid #444; color: #fff;
+            }
+            .oro .rank-avatar { border-color: #d4af37; background: #332b0a; }
+
+            .rank-info { display: flex; align-items: center; gap: 15px; flex: 1; }
+            
+            .rank-main-text { display: flex; flex-direction: column; }
+            .rank-name { font-size: 1.1em; font-weight: bold; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
+            .rank-qty { font-size: 0.8em; color: #d4af37; font-weight: bold; margin-top: 2px; }
+
+            .rank-monto { text-align: right; }
+            .rank-monto b { display: block; color: #fff; font-size: 1.15em; font-weight: 900; }
+            .rank-monto span { font-size: 0.6em; color: #888; text-transform: uppercase; }
+
+            .rank-badge {
+                position: absolute; top: 0; right: 0; padding: 4px 12px;
+                font-size: 1.2em; font-weight: bold; border-bottom-left-radius: 10px;
+                background: #333; color: #aaa;
+            }
+            .oro .rank-badge { background: #d4af37; color: #000; }
+
+            .lista-ranking-resto { background: #0c0c0c; border-radius: 10px; padding: 5px; border: 1px solid #222; }
+            .row-ranking { 
+                display: flex; justify-content: space-between; padding: 12px 15px; 
+                border-bottom: 1px solid #1a1a1a; font-size: 0.9em; align-items: center; 
+            }
+            .row-ranking:last-child { border-bottom: none; }
+            .loading { text-align: center; color: #d4af37; padding: 15px; font-size: 0.8em; }
+        </style>
+
+        <div class="taxis-header"><h1>REPORTE DE COMISIONES</h1></div>
+
+        <div class="filter-section">
+            <label>Tipo de Reporte:</label>
+            <select id="rango-tiempo" onchange="gestionarFiltros()">
+                <option value="dia">Por Día (Detallado)</option>
+                <option value="semana">Por Semana (Agrupado)</option>
+                <option value="quincena">Por Quincena (Agrupado)</option>
+                <option value="mes">Por Mes (Agrupado)</option>
+            </select>
+
+            <div id="filtro-dia">
+                <label>Seleccionar Fecha:</label>
+                <input type="date" id="fecha-dia" onchange="cargarReporte()">
+            </div>
+
+            <div id="filtro-semana" class="sub-filtros">
+                <label>Elegir día de la semana:</label>
+                <input type="date" id="fecha-semana-ref" onchange="cargarReporte()">
+                <div id="rango-semana-texto" class="info-semana"></div>
+            </div>
+
+            <div id="filtro-quincena" class="sub-filtros">
+                <div style="display: flex; gap: 8px;">
+                    <div style="flex: 2;"><label>Mes:</label><input type="month" id="mes-quincena" onchange="cargarReporte()"></div>
+                    <div style="flex: 1;"><label>Q:</label>
+                        <select id="select-quincena" onchange="cargarReporte()">
+                            <option value="1">1ra (1-15)</option>
+                            <option value="2">2da (16+)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="filtro-mes" class="sub-filtros">
+                <label>Seleccionar Mes:</label>
+                <input type="month" id="fecha-mes" onchange="cargarReporte()">
+            </div>
+        </div>
+
+        <div class="card-stats">
+            <div class="stat"><span>Venta Botellas Total</span><b id="stat-ventas">S/ 0.00</b></div>
+            <div class="stat" style="border-left: 2px solid #d4af37;"><span>Pagos Comisión Total</span><b id="stat-comision">S/ 0.00</b></div>
+        </div>
+
+        <table class="tabla-socios">
+            <thead>
+                <tr id="head-tabla"></tr>
+            </thead>
+            <tbody id="lista-reporte"></tbody>
+        </table>
+
+        <div class="ranking-title">🏆 RANKING MENSUAL</div>
+
+        <div class="filter-section" style="margin-top: 10px;">
+            <label>Mes del Ranking:</label>
+            <input type="month" id="mes-ranking" onchange="cargarRanking()">
+        </div>
+
+        <div id="cuadrante-casa" style="display:none;" class="casa-box">
+            <h4>Ventas de la Casa</h4>
+            <p id="info-casa">0 Botellas | Total: S/ 0.00</p>
+        </div>
+
+        <div id="ranking-container">
+            <div id="podium" class="podium-container"></div>
+            <div id="lista-resto" class="lista-ranking-resto"></div>
+        </div>
+
+        <script>
+            const firebaseConfigTaxis = {
+                apiKey: "AIzaSyAKJ0vJGvnzIdkKIvD1w0NCStA19T-TzoM",
+                authDomain: "venecia-control.firebaseapp.com",
+                projectId: "venecia-control",
+                storageBucket: "venecia-control.firebasestorage.app",
+                messagingSenderId: "486778694402",
+                appId: "1:486778694402:web:4276617163b85b5b7bf01b"
+            };
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfigTaxis);
+            }
+            const dbTaxis = firebase.firestore();
+
+            window.addEventListener('load', function() {
+                const hoy = new Date().toISOString().split('T')[0];
+                const mesActual = hoy.substring(0, 7);
+                if(document.getElementById('fecha-dia')) document.getElementById('fecha-dia').value = hoy;
+                if(document.getElementById('fecha-semana-ref')) document.getElementById('fecha-semana-ref').value = hoy;
+                if(document.getElementById('mes-quincena')) document.getElementById('mes-quincena').value = mesActual;
+                if(document.getElementById('fecha-mes')) document.getElementById('fecha-mes').value = mesActual;
+                if(document.getElementById('mes-ranking')) document.getElementById('mes-ranking').value = mesActual;
+                setTimeout(() => { cargarReporte(); cargarRanking(); }, 600);
+            });
+
+            function gestionarFiltros() {
+                const modo = document.getElementById('rango-tiempo').value;
+                document.getElementById('filtro-dia').style.display = (modo === 'dia') ? 'block' : 'none';
+                document.getElementById('filtro-semana').style.display = (modo === 'semana') ? 'flex' : 'none';
+                document.getElementById('filtro-quincena').style.display = (modo === 'quincena') ? 'flex' : 'none';
+                document.getElementById('filtro-mes').style.display = (modo === 'mes') ? 'block' : 'none';
+                cargarReporte();
+            }
+
+            function obtenerCantB(val) {
+                if (!isNaN(parseFloat(val)) && isFinite(val)) {
+                    return parseFloat(val);
+                }
+                return (val && val !== "") ? 1 : 0;
+            }
+
+            function cargarReporte() {
+                const modo = document.getElementById('rango-tiempo').value;
+                const lista = document.getElementById('lista-reporte');
+                const head = document.getElementById('head-tabla');
+                if(!lista) return;
+                lista.innerHTML = '<tr><td colspan="4" class="loading">Cargando...</td></tr>';
+
+                if(modo === 'dia') {
+                    head.innerHTML = '<th style="width: 25%;">Taxista</th><th style="width: 25%;">Concepto</th><th style="width: 25%;">Precio</th><th style="width: 25%;">Comisión</th>';
+                } else {
+                    head.innerHTML = '<th style="width: 25%;">Taxista</th><th style="width: 20%;">Bot.</th><th style="width: 30%;">Precio B.</th><th style="width: 25%;">Comisión</th>';
+                }
+
+                let consulta = dbTaxis.collection("comisiones_taxis");
+                let fI, fF;
+
+                if (modo === 'dia') {
+                    consulta = consulta.where("f", "==", document.getElementById('fecha-dia').value);
+                } else if (modo === 'semana') {
+                    let fechaRef = new Date(document.getElementById('fecha-semana-ref').value + 'T00:00:00');
+                    let diaSemana = fechaRef.getDay();
+                    let diffLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+                    let lunes = new Date(fechaRef);
+                    lunes.setDate(fechaRef.getDate() + diffLunes);
+                    let domingo = new Date(lunes);
+                    domingo.setDate(lunes.getDate() + 6);
+                    fI = lunes.toISOString().split('T')[0];
+                    fF = domingo.toISOString().split('T')[0];
+                    document.getElementById('rango-semana-texto').innerText = `Semana: Lun ${fI.split('-')[2]} a Dom ${fF.split('-')[2]}`;
+                    consulta = consulta.where("f", ">=", fI).where("f", "<=", fF);
+                } else if (modo === 'quincena') {
+                    const m = document.getElementById('mes-quincena').value;
+                    const q = document.getElementById('select-quincena').value;
+                    fI = (q === "1") ? m+"-01" : m+"-16";
+                    fF = (q === "1") ? m+"-15" : m+"-31";
+                    consulta = consulta.where("f", ">=", fI).where("f", "<=", fF);
+                } else if (modo === 'mes') {
+                    const m = document.getElementById('fecha-mes').value;
+                    consulta = consulta.where("f", ">=", m+"-01").where("f", "<=", m+"-31");
+                }
+
+                consulta.get().then(snap => {
+                    lista.innerHTML = "";
+                    let vT = 0, cT = 0;
+                    if (snap.empty) {
+                        lista.innerHTML = `<tr><td colspan="4" style="padding:20px; color:#666;">Sin registros</td></tr>`;
+                        actualizarStats(0,0); return;
+                    }
+
+                    if(modo === 'dia') {
+                        snap.forEach(doc => {
+                            const d = doc.data();
+                            const p = parseFloat(d.p) || 0;
+                            const m = parseFloat(d.m) || 0;
+                            vT += p; cT += m;
+                            const n = d.t ? d.t.toString().trim().toUpperCase() : "ANÓNIMO";
+                            lista.innerHTML += `<tr><td style="color:#d4af37; font-weight:bold;">${n}</td><td>${d.b}</td><td>S/ ${p.toFixed(2)}</td><td>S/ ${m.toFixed(2)}</td></tr>`;
+                        });
+                        lista.innerHTML += `<tr class="total-row"><td colspan="2">TOTAL</td><td>S/ ${vT.toFixed(2)}</td><td>S/ ${cT.toFixed(2)}</td></tr>`;
+                    } else {
+                        let agrupado = {};
+                        snap.forEach(doc => {
+                            const d = doc.data();
+                            const p = parseFloat(d.p) || 0;
+                            const m = parseFloat(d.m) || 0;
+                            const cantB = obtenerCantB(d.b);
+                            const nombre = d.t ? d.t.toString().trim().toUpperCase() : "ANÓNIMO";
+                            
+                            vT += p; cT += m;
+                            if(!agrupado[nombre]) agrupado[nombre] = { b: 0, pTot: 0, com: 0 };
+                            agrupado[nombre].b += cantB;
+                            agrupado[nombre].pTot += p;
+                            agrupado[nombre].com += m;
+                        });
+                        let sortable = Object.entries(agrupado).sort((a,b) => b[1].b - a[1].b);
+                        sortable.forEach(item => {
+                            lista.innerHTML += `<tr>
+                                <td style="color:#d4af37; font-weight:bold;">${item[0]}</td>
+                                <td>${item[1].b}</td>
+                                <td>S/ ${item[1].pTot.toFixed(2)}</td>
+                                <td style="color:#fff; font-weight:bold;">S/ ${item[1].com.toFixed(2)}</td>
+                            </tr>`;
+                        });
+                        lista.innerHTML += `<tr class="total-row"><td colspan="3">SUMA TOTAL COMISIONES</td><td>S/ ${cT.toFixed(2)}</td></tr>`;
+                    }
+                    actualizarStats(vT.toFixed(2), cT.toFixed(2));
+                });
+            }
+
+            function cargarRanking() {
+                const mesRanking = document.getElementById('mes-ranking').value;
+                const podium = document.getElementById('podium');
+                const resto = document.getElementById('lista-resto');
+                const casaBox = document.getElementById('cuadrante-casa');
+                const infoCasa = document.getElementById('info-casa');
+                if(!podium) return;
+                
+                podium.innerHTML = '<div class="loading">Cargando Ranking...</div>';
+                resto.innerHTML = "";
+                casaBox.style.display = "none";
+
+                dbTaxis.collection("comisiones_taxis").where("f", ">=", mesRanking + "-01").where("f", "<=", mesRanking + "-31").get().then(snap => {
+                    podium.innerHTML = "";
+                    if (snap.empty) {
+                        podium.innerHTML = '<div style="text-align:center; color:#666; padding:20px;">Sin datos este mes.</div>';
+                        return;
+                    }
+                    
+                    let dataRank = {};
+                    let casaData = { b: 0, m: 0 };
+
+                    snap.forEach(doc => {
+                        const d = doc.data();
+                        const nombreNorm = d.t ? d.t.toString().trim().toUpperCase() : "ANÓNIMO";
+                        const cantB = obtenerCantB(d.b);
+                        const comision = parseFloat(d.m) || 0;
+
+                        if(nombreNorm === "CASA") {
+                            casaData.b += cantB;
+                            casaData.m += comision;
+                        } else {
+                            if(!dataRank[nombreNorm]) dataRank[nombreNorm] = { botellas: 0, comision: 0 };
+                            dataRank[nombreNorm].botellas += cantB;
+                            dataRank[nombreNorm].comision += comision;
+                        }
+                    });
+
+                    if(casaData.b > 0) {
+                        casaBox.style.display = "block";
+                        infoCasa.innerText = `${casaData.b} Botellas | Comisión Total: S/ ${casaData.m.toFixed(2)}`;
+                    }
+
+                    let finalRank = Object.entries(dataRank).sort((a,b) => b[1].botellas - a[1].botellas);
+                    
+                    finalRank.forEach((item, index) => {
+                        const [nombre, info] = item;
+                        const inicial = nombre.charAt(0);
+                        const posicion = index + 1;
+
+                        if(index < 3) {
+                            let clase = (index === 0) ? "oro" : (index === 1) ? "plata" : "bronce";
+                            podium.innerHTML += `
+                                <div class="rank-card ${clase}">
+                                    <div class="rank-badge">${posicion}</div>
+                                    <div class="rank-info">
+                                        <div class="rank-avatar">${inicial}</div>
+                                        <div class="rank-main-text">
+                                            <span class="rank-name">${nombre}</span>
+                                            <span class="rank-qty">${info.botellas} Botellas logradas</span>
+                                        </div>
+                                    </div>
+                                    <div class="rank-monto">
+                                        <span>Total Pago</span>
+                                        <b>S/ ${info.comision.toFixed(2)}</b>
+                                    </div>
+                                </div>`;
+                        } else {
+                            resto.innerHTML += `
+                                <div class="row-ranking">
+                                    <span style="font-weight:bold; color:#eee;"><span style="color:#d4af37; margin-right:8px;">#${posicion}</span> ${nombre}</span>
+                                    <div style="text-align:right;">
+                                        <div style="font-size:0.8em; color:#888;">${info.botellas} bot.</div>
+                                        <span style="color:#d4af37; font-weight:bold;">S/ ${info.comision.toFixed(2)}</span>
+                                    </div>
+                                </div>`;
+                        }
+                    });
+                });
+            }
+
+            function actualizarStats(v, c) {
+                if(document.getElementById('stat-ventas')) document.getElementById('stat-ventas').innerText = "S/ " + v;
+                if(document.getElementById('stat-comision')) document.getElementById('stat-comision').innerText = "S/ " + c;
+            }
+        </script>
+        </div>
+
+    <div id="mozos" class="tab-content">
+        <style>
+            .mozos-body { font-family: 'Segoe UI', sans-serif; background-color: #0d0d0d; color: #e0e0e0; margin: 0; padding: 10px; }
+            .container-mozos { max-width: 600px; margin: auto; background: #1a1a1a; padding: 15px; border-radius: 12px; border: 1px solid #333; }
+            .mozos-h1 { text-align:center; color:#d4af37; font-size:1.3em; margin-bottom:20px; text-transform: uppercase; }
+            .mozos-h2 { text-align: center; color: #d4af37; text-transform: uppercase; font-size: 1em; margin: 25px 0 10px 0; border-bottom: 1px solid #d4af37; padding-bottom: 5px; position: relative; }
+            
+            .input-group-mozos { background: #222; padding: 10px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #d4af37; }
+            .label-mozos { display: block; font-size: 0.75em; color: #888; margin-bottom: 5px; text-transform: uppercase; }
+            .input-mozos, .select-mozos { width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #333; background: #111; color: white; box-sizing: border-box; font-size: 0.9em; }
+            
+            .btn-toggle-mozos { width: 100%; padding: 12px; background: #d4af37; color: black; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; margin: 8px 0; font-size: 0.85em; display: flex; justify-content: space-between; align-items: center; }
+            .btn-toggle-mozos.cortesia { background: #444; color: #d4af37; border: 1px solid #d4af37; }
+            .hidden-content-mozos { display: none; margin-top: 10px; animation: fadeIn 0.3s; }
+            
+            .selector-ranking-mozos { display: flex; gap: 5px; margin-bottom: 15px; }
+            .btn-rank-mozos { flex: 1; padding: 8px; background: #222; border: 1px solid #444; color: #888; border-radius: 5px; font-size: 0.7em; font-weight: bold; cursor: pointer; }
+            .btn-rank-mozos.active { background: #d4af37; color: black; border-color: #d4af37; }
+
+            .tabla-resumen-mozos { width: 100%; border-collapse: collapse; font-size: 0.8em; background: #111; }
+            .tabla-resumen-mozos th { background: #d4af37; color: black; padding: 8px; border: 1px solid #333; }
+            .tabla-resumen-mozos td { padding: 8px; border: 1px solid #333; text-align: center; }
+            
+            .mini-ranking-mozos { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 15px; font-size: 0.85em; }
+            .mini-chip-mozos { background: #2a2a2a; padding: 6px 12px; border-radius: 20px; border: 1px solid #d4af37; color: #fff; cursor: pointer; }
+            
+            .card-mozo-item { background: #252525; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #444; }
+            .nombre-mozo-item { color: #d4af37; font-weight: bold; font-size: 1em; text-transform: uppercase; display: flex; justify-content: space-between; }
+            .stats-mozo-item { display: flex; justify-content: space-around; margin-top: 8px; }
+
+            .ranking-container-perfil-mozos { background: linear-gradient(145deg, #151515, #050505); border-radius: 20px; border: 1px solid #222; padding: 15px; margin-bottom: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+            .staff-wrapper-mozos { display: flex; overflow-x: auto; gap: 15px; padding-bottom: 10px; scrollbar-width: none; }
+            .profile-card-mozo { text-align: center; min-width: 85px; cursor: pointer; }
+            .avatar-circle-mozo { width: 70px; height: 70px; border-radius: 50%; border: 2px solid #333; overflow: hidden; background: #111; margin: 0 auto 8px auto; }
+            .avatar-circle-mozo img { width: 100%; height: 100%; object-fit: cover; }
+
+            .modal-mozos { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); }
+            .modal-content-mozos { background: #1a1a1a; margin: 15% auto; padding: 20px; border: 1px solid #d4af37; width: 85%; max-width: 400px; border-radius: 12px; }
+        </style>
+
+        <div class="container-mozos">
+            <h1 class="mozos-h1">CONTROL VENECIA</h1>
+            
+            <div class="ranking-container-perfil-mozos">
+                <div style="color: #d4af37; font-size: 0.75em; font-weight: 800; letter-spacing: 3px; margin-bottom: 15px; text-transform: uppercase;">PERFIL DE MOZOS</div>
+                <div id="lista-mozos-perfil" class="staff-wrapper-mozos"></div>
+                <div id="info-box-perfil" style="margin: 10px auto 5px auto; background: rgba(212, 175, 55, 0.05); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 12px; padding: 10px; text-align: center; display: none;">
+                    <div id="mozo-nombre-perfil" style="font-weight: 800; color: #d4af37; font-size: 1.1em; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom:5px;"></div>
+                    <div id="mozo-top-perfil" style="font-size: 0.85em; color: #fff; font-weight: bold;"></div>
+                </div>
+            </div>
+
+            <div class="input-group-mozos">
+                <label class="label-mozos">Fecha de Consulta:</label>
+                <input type="date" id="filtro-mozos" class="input-mozos" onchange="cargarTodoMozos()">
+            </div>
+            <div id="mini-ranking-diario-mozos" class="mini-ranking-mozos"></div>
+
+            <button class="btn-toggle-mozos" onclick="toggleSeccionMozos('seccion-botellas-mozos')">
+                <span>👁️ VER SALIDA DE BOTELLAS DETALLADO</span>
+                <b id="global-botellas-mozos">0</b>
+            </button>
+            <div id="seccion-botellas-mozos" class="hidden-content-mozos">
+                <h2 class="mozos-h2">Detalle de Entregas</h2>
+                <table class="tabla-resumen-mozos">
+                    <thead><tr><th>CANT</th><th>MOZO / CLIENTE</th><th>PRODUCTO</th></tr></thead>
+                    <tbody id="tabla-botellas-mozos"></tbody>
+                </table>
+            </div>
+
+            <button class="btn-toggle-mozos cortesia" onclick="toggleSeccionMozos('seccion-cortesias-mozos')">
+                <span>🎁 VER CORTESÍAS DETALLADO</span>
+                <span id="label-cortesias-mozos">VER</span>
+            </button>
+            <div id="seccion-cortesias-mozos" class="hidden-content-mozos">
+                <h2 class="mozos-h2">Cortesías Entregadas</h2>
+                <table class="tabla-resumen-mozos">
+                    <thead><tr><th>CANT</th><th>ASIGNADO A</th><th>PRODUCTO</th></tr></thead>
+                    <tbody id="tabla-cortesias-mozos"></tbody>
+                </table>
+            </div>
+
+            <h2 class="mozos-h2" style="margin-top:30px;">RANKING DE MOZOS</h2>
+            <div class="selector-ranking-mozos">
+                <button class="btn-rank-mozos active" id="btn-sem-mozos" onclick="cambiarVistaRankMozos('sem')">SEMANA</button>
+                <button class="btn-rank-mozos" id="btn-qui-mozos" onclick="cambiarVistaRankMozos('qui')">QUINCENA</button>
+                <button class="btn-rank-mozos" id="btn-mes-mozos" onclick="cambiarVistaRankMozos('mes')">MES</button>
+            </div>
+
+            <div id="controles-ranking-mozos">
+                <div id="ctrl-sem-mozos" class="input-group-mozos">
+                    <label class="label-mozos">Elegir Semana:</label>
+                    <input type="date" id="filtroSemana-mozos" class="input-mozos" onchange="cargarRankingSemanalMozos()">
+                    <div id="texto-semana-mozos" style="text-align:center; font-size:0.85em; color:#d4af37; margin-top:10px; font-style:italic; font-weight: bold;"></div>
+                </div>
+                <div id="ctrl-mes-mozos" class="input-group-mozos" style="display:none;">
+                    <div style="display:flex; gap:10px;">
+                        <div style="flex:1"><label class="label-mozos">Mes:</label><input type="month" id="filtroMes-mozos" class="input-mozos" onchange="cargarBalanceMensualMozos()"></div>
+                        <div id="box-qui-mozos" style="flex:1; display:none;"><label class="label-mozos">Q:</label>
+                            <select id="filtroQuincena-mozos" class="select-mozos" onchange="cargarBalanceMensualMozos()">
+                                <option value="q1">1ra (1-15)</option>
+                                <option value="q2">2da (16-Fin)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="ranking-dinamico-mozos"></div>
+        </div>
+
+        <div id="modalComandas-mozos" class="modal-mozos">
+            <div class="modal-content-mozos">
+                <h3 id="modalTitulo-mozos" style="color:#d4af37; text-align:center;"></h3>
+                <div id="cuerpoComandas-mozos"></div>
+                <button style="background: #d4af37; color: black; border: none; padding: 10px; width: 100%; border-radius: 8px; font-weight: bold; margin-top: 15px;" onclick="cerrarModalMozos()">CERRAR</button>
+            </div>
+        </div>
+
+        <script>
+            const dbMozos = firebase.firestore();
+            let registrosDelDiaMozos = [];
+            let statsGlobalesPerfilesMozos = {}; 
+
+            function toggleSeccionMozos(id) {
+                const content = document.getElementById(id);
+                content.style.display = (content.style.display === 'block') ? 'none' : 'block';
+            }
+
+            function cambiarVistaRankMozos(tipo) {
+                document.querySelectorAll('.btn-rank-mozos').forEach(b => b.classList.remove('active'));
+                document.getElementById('btn-' + tipo + '-mozos').classList.add('active');
+                document.getElementById('ctrl-sem-mozos').style.display = (tipo === 'sem') ? 'block' : 'none';
+                document.getElementById('ctrl-mes-mozos').style.display = (tipo !== 'sem') ? 'block' : 'none';
+                document.getElementById('box-qui-mozos').style.display = (tipo === 'qui') ? 'block' : 'none';
+                if(tipo === 'sem') cargarRankingSemanalMozos(); else cargarBalanceMensualMozos();
+            }
+
+            function cargarTodoMozos() {
+                const fecha = document.getElementById('filtro-mozos').value;
+                cargarBotellasMozos(fecha);
+                cargarCortesiasMozos(fecha);
+                cambiarVistaRankMozos('sem');
+                actualizarCarruselPerfilesMozos(); 
+            }
+
+            function actualizarCarruselPerfilesMozos() {
+                const mesActual = document.getElementById('filtroMes-mozos').value;
+                dbMozos.collection("ventas").where("f", ">=", `${mesActual}-01`).where("f", "<=", `${mesActual}-31`).onSnapshot(snap => {
+                    let data = {};
+                    snap.forEach(doc => {
+                        const d = doc.data(); const mozo = d.m || "Otros"; const cant = parseInt(d.c) || 0;
+                        const esRP = (d.tipo === "RP" || (d.b && d.b.toUpperCase().includes("RP")));
+                        if(!data[mozo]) data[mozo] = { normal: 0, rp: 0, productos: {} };
+                        if(esRP) data[mozo].rp += cant;
+                        else {
+                            data[mozo].normal += cant;
+                            const botella = d.b ? d.b.replace(/ RP/i, "").trim() : "S/N";
+                            data[mozo].productos[botella] = (data[mozo].productos[botella] || 0) + cant;
+                        }
+                    });
+                    statsGlobalesPerfilesMozos = data;
+                    renderizarCarruselMozos(data);
+                });
+            }
+
+            function renderizarCarruselMozos(data) {
+                const wrapper = document.getElementById('lista-mozos-perfil');
+                if(!wrapper) return;
+                const mozosOrdenados = Object.entries(data).sort((a,b) => b[1].normal - a[1].normal);
+                wrapper.innerHTML = mozosOrdenados.map(([nombre, stats], index) => {
+                    const medalla = index === 0 ? '👑' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : ''));
+                    return `<div class="profile-card-mozo" onclick="verDetallePerfilMozos('${nombre}')"><div class="avatar-circle-mozo"><img src="https://ui-avatars.com/api/?name=${nombre}&background=111&color=d4af37&bold=true"></div><div style="font-size:0.8em; color:#fff; font-weight:bold; text-transform:uppercase;">${medalla} ${nombre}</div></div>`;
+                }).join('');
+            }
+
+            function verDetallePerfilMozos(nombre) {
+                const box = document.getElementById('info-box-perfil');
+                const s = statsGlobalesPerfilesMozos[nombre];
+                if(!s || !box) return;
+                box.style.display = 'block';
+                document.getElementById('mozo-nombre-perfil').innerText = nombre.toUpperCase();
+                const topProd = Object.entries(s.productos).sort((a,b) => b[1] - a[1])[0];
+                document.getElementById('mozo-top-perfil').innerHTML = `<span style="color:#d4af37; font-size:0.8em; text-transform:uppercase;">Botella que vende mas:</span><br>${topProd ? topProd[0] : '---'}`;
+            }
+
+            function cargarBotellasMozos(fecha) {
+                dbMozos.collection("ventas").where("f", "==", fecha).onSnapshot(snap => {
+                    const tabla = document.getElementById('tabla-botellas-mozos');
+                    const miniRankingDiv = document.getElementById('mini-ranking-diario-mozos');
+                    if(!tabla) return;
+                    tabla.innerHTML = ""; miniRankingDiv.innerHTML = ""; registrosDelDiaMozos = [];
+                    let totalGeneral = 0; let mozosHoy = {}; let dataArr = [];
+                    snap.forEach(doc => {
+                        const d = doc.data(); registrosDelDiaMozos.push(d);
+                        const cant = parseInt(d.c) || 0; totalGeneral += cant;
+                        const esRP = (d.tipo === "RP");
+                        const esFantasma = (d.tipo === "FANTASMA");
+                        const nombreLimpio = d.b ? d.b.replace(/ RP/i, "").trim() : "S/N";
+                        dataArr.push({ mozo: d.m, botella: nombreLimpio, cant: cant, esRP: esRP, esFantasma: esFantasma });
+                        if(!mozosHoy[d.m]) mozosHoy[d.m] = { normal: 0, rp: 0 };
+                        if(esRP) mozosHoy[d.m].rp += cant; else mozosHoy[d.m].normal += cant;
+                    });
+                    document.getElementById('global-botellas-mozos').innerText = totalGeneral;
+                    Object.entries(mozosHoy).sort((a,b) => (b[1].normal + b[1].rp) - (a[1].normal + a[1].rp)).forEach(([nom, st]) => {
+                        miniRankingDiv.innerHTML += `<div class="mini-chip-mozos" onclick="verComandasMozos('${nom}')"><b>${nom}:</b> ${st.normal}${st.rp > 0 ? ' + '+st.rp+'RP' : ''}</div>`;
+                    });
+                    let agrupado = [];
+                    dataArr.forEach(item => {
+                        let existe = agrupado.find(x => x.mozo === item.mozo && x.botella === item.botella && x.esRP === item.esRP && x.esFantasma === item.esFantasma);
+                        if(existe) existe.total += item.cant; else agrupado.push({ mozo: item.mozo, botella: item.botella, total: item.cant, esRP: item.esRP, esFantasma: item.esFantasma });
+                    });
+                    agrupado.sort((a, b) => a.mozo.localeCompare(b.mozo)).forEach(item => {
+                        let tag = item.esRP ? '<span style="color:#d4af37; font-weight:bold; margin-left:5px;">[RP]</span>' : (item.esFantasma ? '<span style="color:#ff4444; font-weight:bold; margin-left:5px;">[F]</span>' : "");
+                        tabla.innerHTML += `<tr><td><b>${item.total}</b></td><td>${item.mozo}</td><td>${item.botella}${tag}</td></tr>`;
+                    });
+                });
+            }
+
+            function verComandasMozos(nombreMozo) {
+                document.getElementById('modalTitulo-mozos').innerText = `COMANDAS DE ${nombreMozo}`;
+                const cuerpo = document.getElementById('cuerpoComandas-mozos');
+                cuerpo.innerHTML = "";
+                let filtrados = registrosDelDiaMozos.filter(r => r.m === nombreMozo);
+                filtrados.forEach(r => {
+                    let tagModal = r.tipo === "RP" ? ' <b style="color:#d4af37;">[RP]</b>' : (r.tipo === "FANTASMA" ? ' <b style="color:#ff4444;">[F]</b>' : "");
+                    cuerpo.innerHTML += `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #222;"><span>${r.b}${tagModal}</span><span style="color:#d4af37;">#${r.co || '--'}</span></div>`;
+                });
+                document.getElementById('modalComandas-mozos').style.display = "block";
+            }
+
+            function cerrarModalMozos() { document.getElementById('modalComandas-mozos').style.display = "none"; }
+
+            function cargarCortesiasMozos(fecha) {
+                dbMozos.collection("cortesias").where("f", "==", fecha).onSnapshot(snap => {
+                    const tabla = document.getElementById('tabla-cortesias-mozos');
+                    if(!tabla) return;
+                    tabla.innerHTML = "";
+                    snap.forEach(doc => {
+                        const d = doc.data();
+                        tabla.innerHTML += `<tr><td><b>${d.c}</b></td><td>${d.n}</td><td>${d.p}</td></tr>`;
+                    });
+                });
+            }
+
+            function cargarRankingSemanalMozos() {
+                const inputFecha = document.getElementById('filtroSemana-mozos').value;
+                const fechaBase = new Date(inputFecha + "T12:00:00");
+                const diff = fechaBase.getDate() - fechaBase.getDay() + (fechaBase.getDay() === 0 ? -6 : 1);
+                const lunes = new Date(fechaBase.setDate(diff));
+                const domingo = new Date(lunes); domingo.setDate(lunes.getDate() + 6);
+                const diasNom = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
+                document.getElementById('texto-semana-mozos').innerText = `Semana: ${diasNom[lunes.getDay()]} ${lunes.getDate()} a ${diasNom[domingo.getDay()]} ${domingo.getDate()}`;
+                renderRankingMozos("ranking-dinamico-mozos", lunes.toISOString().split('T')[0], domingo.toISOString().split('T')[0]);
+            }
+
+            function cargarBalanceMensualMozos() {
+                const mesSel = document.getElementById('filtroMes-mozos').value;
+                const qSel = document.querySelector('.btn-rank-mozos.active').id === 'btn-qui-mozos' ? document.getElementById('filtroQuincena-mozos').value : 'mes';
+                let fInicio = `${mesSel}-01`, fFin = `${mesSel}-31`;
+                if(qSel === "q1") fFin = `${mesSel}-15`; else if(qSel === "q2") fInicio = `${mesSel}-16`;
+                renderRankingMozos("ranking-dinamico-mozos", fInicio, fFin);
+            }
+
+            async function renderRankingMozos(containerId, fInicio, fFin) {
+                dbMozos.collection("ventas").where("f", ">=", fInicio).where("f", "<=", fFin).onSnapshot(snap => {
+                    const div = document.getElementById(containerId); if(!div) return; div.innerHTML = "";
+                    let balance = {};
+                    snap.forEach(doc => {
+                        const d = doc.data(); const mozo = d.m || "Otros"; const cant = parseInt(d.c) || 0;
+                        const esRP = (d.tipo === "RP" || (d.b && d.b.toUpperCase().includes("RP")));
+                        if(!balance[mozo]) balance[mozo] = { botellas: 0, rp: 0 };
+                        if(esRP) balance[mozo].rp += cant; else balance[mozo].botellas += cant;
+                    });
+                    Object.entries(balance).sort((a, b) => (b[1].botellas + b[1].rp) - (a[1].botellas + a[1].rp)).forEach(([nombre, stats], index) => {
+                        const medalla = index === 0 ? "🥇" : (index === 1 ? "🥈" : (index === 2 ? "🥉" : ""));
+                        div.innerHTML += `<div class="card-mozo-item"><div class="nombre-mozo-item"><span>${medalla} ${nombre}</span> <span>POS. ${index+1}</span></div><div class="stats-mozo-item"><div style="text-align:center;"><span style="display:block; font-size:1.1em; color:white; font-weight:bold;">${stats.botellas}</span><span style="font-size:0.65em; color:#888; text-transform:uppercase;">Botellas</span></div><div style="text-align:center;"><span style="display:block; font-size:1.1em; color:#d4af37; font-weight:bold;">${stats.rp}</span><span style="font-size:0.65em; color:#888; text-transform:uppercase;">RP</span></div></div></div>`;
+                    });
+                });
+            }
+
+            window.addEventListener('load', function() {
+                const hoy = new Date().toISOString().split('T')[0];
+                if(document.getElementById('filtro-mozos')) {
+                    document.getElementById('filtro-mozos').value = hoy;
+                    document.getElementById('filtroSemana-mozos').value = hoy;
+                    document.getElementById('filtroMes-mozos').value = hoy.substring(0, 7);
+                    cargarTodoMozos();
+                }
+            });
+        </script>
+        </div>
+
+    <div id="piscinas" class="tab-content">
+        <style>
+            .piscinas-body { font-family: 'Segoe UI', sans-serif; background-color: #050505; color: #e0e0e0; margin: 0; padding: 15px; }
+            .piscinas-header { text-align: center; border-bottom: 2px solid #00d4ff; margin-bottom: 20px; padding-bottom: 10px; }
+            .piscinas-header h1 { color: #00d4ff; font-size: 1.4em; text-transform: uppercase; margin: 10px 0; }
+            
+            .filtros-box { background: #111; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #222; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+            .label-filtro { display: block; font-size: 0.75em; color: #d4af37; text-transform: uppercase; margin-bottom: 5px; font-weight: bold; }
+            .piscinas-select, .piscinas-input { width: 100%; padding: 12px; margin-bottom: 15px; background: #000; color: white; border: 1px solid #333; border-radius: 8px; box-sizing: border-box; font-size: 1em; }
+            
+            .info-semana-pisc { background: rgba(0, 212, 255, 0.1); color: #00d4ff; padding: 12px; border-radius: 8px; font-size: 0.9em; margin-bottom: 15px; border: 1px solid #00d4ff; display: none; text-align: center; font-weight: bold; text-transform: capitalize; }
+
+            .flex-group { display: flex; gap: 10px; }
+            .flex-group div { flex: 1; }
+
+            .tabla-header-pisc { background: #00d4ff; color: black; display: flex; justify-content: space-between; padding: 12px 20px; border-radius: 8px 8px 0 0; font-weight: bold; text-transform: uppercase; font-size: 0.85em; }
+            .lista-reporte-pisc { background: #111; border-radius: 0 0 8px 8px; overflow: hidden; }
+            .fila-mozo-pisc { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; border-bottom: 1px solid #222; }
+            .mozo-nombre-pisc { font-weight: bold; color: white; text-transform: uppercase; }
+            .mozo-total-pisc { color: #00d4ff; font-weight: 900; font-size: 1.1em; }
+            
+            .empty-msg { padding: 30px; text-align: center; color: #555; font-style: italic; }
+        </style>
+
+        <div class="piscinas-header"><h1>REPORTE DE PISCINAS</h1></div>
+
+        <div class="filtros-box">
+            <label class="label-filtro">Ver por:</label>
+            <select id="tipo-reporte-pisc" class="piscinas-select" onchange="toggleFiltrosPisc()">
+                <option value="dia">Por Día</option>
+                <option value="semana">Por Semana</option>
+                <option value="quincena">Por Quincena</option>
+                <option value="mes">Por Mes</option>
+            </select>
+
+            <div id="section-dia-pisc">
+                <label class="label-filtro">Seleccionar Día:</label>
+                <input type="date" id="f-dia-pisc" class="piscinas-input" onchange="ejecutarReportePisc()">
+            </div>
+
+            <div id="section-semana-pisc" style="display:none;">
+                <label class="label-filtro">Selecciona un día de la semana:</label>
+                <input type="date" id="f-semana-pisc" class="piscinas-input" onchange="ejecutarReportePisc()">
+                <div id="info-rango-semana-pisc" class="info-semana-pisc"></div>
+            </div>
+
+            <div id="section-quincena-pisc" style="display:none;">
+                <div class="flex-group">
+                    <div>
+                        <label class="label-filtro">Mes y Año:</label>
+                        <input type="month" id="mes-quincena-pisc" class="piscinas-input" onchange="ejecutarReportePisc()">
+                    </div>
+                    <div>
+                        <label class="label-filtro">Quincena:</label>
+                        <select id="select-q-pisc" class="piscinas-select" onchange="ejecutarReportePisc()">
+                            <option value="1">1ra (1-15)</option>
+                            <option value="2">2da (16-Fin)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="section-mes-pisc" style="display:none;">
+                <label class="label-filtro">Seleccionar Mes:</label>
+                <input type="month" id="mes-solo-pisc" class="piscinas-input" onchange="ejecutarReportePisc()">
+            </div>
+        </div>
+
+        <div class="tabla-header-pisc">
+            <span>Mozo</span>
+            <span>Total Piscinas</span>
+        </div>
+        <div class="lista-reporte-pisc" id="contenedor-reporte-pisc"></div>
+
+        <script>
+            const dbPisc = firebase.firestore();
+
+            function initPisc() {
+                const ahora = new Date();
+                const hoy = ahora.toISOString().substring(0, 10);
+                const mesActual = ahora.toISOString().substring(0, 7);
+                
+                document.getElementById('f-dia-pisc').value = hoy;
+                document.getElementById('f-semana-pisc').value = hoy;
+                document.getElementById('mes-quincena-pisc').value = mesActual;
+                document.getElementById('mes-solo-pisc').value = mesActual;
+                document.getElementById('select-q-pisc').value = (ahora.getDate() <= 15) ? "1" : "2";
+                
+                ejecutarReportePisc();
+            }
+
+            function toggleFiltrosPisc() {
+                const tipo = document.getElementById('tipo-reporte-pisc').value;
+                ['dia', 'semana', 'quincena', 'mes'].forEach(s => {
+                    document.getElementById('section-' + s + '-pisc').style.display = (tipo === s) ? 'block' : 'none';
+                });
+                ejecutarReportePisc();
+            }
+
+            function formatFechaBonitaPisc(fechaStr) {
+                const opciones = { weekday: 'long', day: 'numeric', month: 'long' };
+                const fecha = new Date(fechaStr + "T12:00:00");
+                return fecha.toLocaleDateString('es-ES', opciones);
+            }
+
+            function ejecutarReportePisc() {
+                const tipo = document.getElementById('tipo-reporte-pisc').value;
+                const lista = document.getElementById('contenedor-reporte-pisc');
+                lista.innerHTML = "<div class='empty-msg'>Cargando...</div>";
+
+                let fechaI, fechaF;
+                const infoSemana = document.getElementById('info-rango-semana-pisc');
+                infoSemana.style.display = "none";
+
+                if (tipo === 'dia') {
+                    fechaI = document.getElementById('f-dia-pisc').value;
+                    fechaF = fechaI;
+                } 
+                else if (tipo === 'semana') {
+                    let date = new Date(document.getElementById('f-semana-pisc').value + "T12:00:00");
+                    let day = date.getDay(); 
+                    let diff = date.getDate() - day + (day == 0 ? -6 : 1);
+                    let lunes = new Date(new Date(date).setDate(diff));
+                    let domingo = new Date(new Date(lunes).setDate(lunes.getDate() + 6));
+                    fechaI = lunes.toISOString().split('T')[0];
+                    fechaF = domingo.toISOString().split('T')[0];
+                    infoSemana.innerHTML = `De ${formatFechaBonitaPisc(fechaI)} <br> a ${formatFechaBonitaPisc(fechaF)}`;
+                    infoSemana.style.display = "block";
+                } 
+                else if (tipo === 'quincena') {
+                    const m = document.getElementById('mes-quincena-pisc').value;
+                    fechaI = (document.getElementById('select-q-pisc').value === "1") ? m + "-01" : m + "-16";
+                    fechaF = (document.getElementById('select-q-pisc').value === "1") ? m + "-15" : m + "-31";
+                } 
+                else {
+                    const m = document.getElementById('mes-solo-pisc').value;
+                    fechaI = m + "-01";
+                    fechaF = m + "-31";
+                }
+
+                dbPisc.collection("piscinas").where("f", ">=", fechaI).where("f", "<=", fechaF).get().then(snap => {
+                    let totales = {};
+                    snap.forEach(doc => {
+                        const m = doc.data().m;
+                        totales[m] = (totales[m] || 0) + 1;
+                    });
+                    renderizarPisc(totales);
+                });
+            }
+
+            function renderizarPisc(datos) {
+                const lista = document.getElementById('contenedor-reporte-pisc');
+                const entries = Object.entries(datos).sort((a, b) => b[1] - a[1]);
+                if (entries.length === 0) {
+                    lista.innerHTML = "<div class='empty-msg'>Sin registros</div>";
+                    return;
+                }
+                lista.innerHTML = "";
+                entries.forEach(item => {
+                    lista.innerHTML += `<div class="fila-mozo-pisc"><div class="mozo-nombre-pisc">${item[0]}</div><div class="mozo-total-pisc">${item[1]} PISCINAS</div></div>`;
+                });
+            }
+
+            window.addEventListener('load', initPisc);
+        </script>
+    </div>
+</div>
+
+
+<nav class="bottom-nav">
+    <button class="nav-item active" onclick="cambiarTab('taxis', this)">
+        <img src="https://em-content.zobj.net/source/microsoft-teams/363/taxi_1f695.png" alt="🚖" class="nav-icon">
+        <span class="nav-label">Taxis</span>
+    </button>
+
+    <button class="nav-item" onclick="cambiarTab('mozos', this)">
+        <img src="https://em-content.zobj.net/source/microsoft-teams/363/man-in-tuxedo_1f935-200d-2642-fe0f.png" alt="👔" class="nav-icon">
+        <span class="nav-label">Mozos</span>
+    </button>
+
+    <button class="nav-item" onclick="cambiarTab('piscinas', this)">
+        <img src="https://em-content.zobj.net/source/microsoft-teams/363/tropical-drink_1f379.png" alt="🍹" class="nav-icon">
+        <span class="nav-label">Piscinas</span>
+    </button>
+</nav>
+
+
+<script>
+    function cambiarTab(idSeccion, botonPresionado) {
+        if (botonPresionado.classList.contains('active')) return;
+
+        if (window.navigator && window.navigator.vibrate) {
+            window.navigator.vibrate(20);
+        }
+
+        const secciones = document.querySelectorAll('.tab-content');
+        secciones.forEach(seccion => {
+            seccion.classList.remove('active');
+        });
+
+        const botones = document.querySelectorAll('.nav-item');
+        botones.forEach(boton => {
+            boton.classList.remove('active');
+        });
+
+        const seccionElegida = document.getElementById(idSeccion);
+        if (seccionElegida) {
+            seccionElegida.classList.add('active');
+        }
+
+        botonPresionado.classList.add('active');
+    }
+</script>
+
+</body>
+</html>
