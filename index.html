@@ -986,12 +986,15 @@
                 }
 
                 dbPisc.collection("piscinas").where("f", ">=", fechaI).where("f", "<=", fechaF).get().then(snap => {
-                    let totales = {};
+                    let totalesUnidades = {}; // Sumamos puntos (1 o 2)
                     snap.forEach(doc => {
-                        const m = doc.data().m;
-                        totales[m] = (totales[m] || 0) + 1;
+                        const d = doc.data();
+                        const mozo = d.m;
+                        // Si d.v no existe, vale 2 (entera). Si existe usa su valor real.
+                        const valor = d.v || 2; 
+                        totalesUnidades[mozo] = (totalesUnidades[mozo] || 0) + valor;
                     });
-                    renderizarPisc(totales);
+                    renderizarPisc(totalesUnidades);
                 });
             }
 
@@ -1004,7 +1007,9 @@
                 }
                 lista.innerHTML = "";
                 entries.forEach(item => {
-                    lista.innerHTML += `<div class="fila-mozo-pisc"><div class="mozo-nombre-pisc">${item[0]}</div><div class="mozo-total-pisc">${item[1]} PISCINAS</div></div>`;
+                    // Dividimos puntos entre 2 para obtener el numero de piscinas (ej: 3 puntos / 2 = 1.5)
+                    const totalReal = item[1] / 2;
+                    lista.innerHTML += `<div class="fila-mozo-pisc"><div class="mozo-nombre-pisc">${item[0]}</div><div class="mozo-total-pisc">${totalReal} PISCINAS</div></div>`;
                 });
             }
 
