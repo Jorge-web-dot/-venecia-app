@@ -550,7 +550,7 @@
                 if(document.getElementById('stat-comision')) document.getElementById('stat-comision').innerText = "S/ " + c;
             }
         </script>
-        </div>
+    </div>
 
     <div id="mozos" class="tab-content">
         <style>
@@ -843,7 +843,7 @@
                 }
             });
         </script>
-        </div>
+    </div>
 
     <div id="piscinas" class="tab-content">
         <style>
@@ -920,18 +920,19 @@
         <div class="lista-reporte-pisc" id="contenedor-reporte-pisc"></div>
 
         <script>
-            const dbPisc = firebase.firestore();
+            // Usamos var para que no choque si se recarga
+            var dbPisc = firebase.firestore();
 
             function initPisc() {
                 const ahora = new Date();
                 const hoy = ahora.toISOString().substring(0, 10);
                 const mesActual = ahora.toISOString().substring(0, 7);
                 
-                document.getElementById('f-dia-pisc').value = hoy;
-                document.getElementById('f-semana-pisc').value = hoy;
-                document.getElementById('mes-quincena-pisc').value = mesActual;
-                document.getElementById('mes-solo-pisc').value = mesActual;
-                document.getElementById('select-q-pisc').value = (ahora.getDate() <= 15) ? "1" : "2";
+                if(document.getElementById('f-dia-pisc')) document.getElementById('f-dia-pisc').value = hoy;
+                if(document.getElementById('f-semana-pisc')) document.getElementById('f-semana-pisc').value = hoy;
+                if(document.getElementById('mes-quincena-pisc')) document.getElementById('mes-quincena-pisc').value = mesActual;
+                if(document.getElementById('mes-solo-pisc')) document.getElementById('mes-solo-pisc').value = mesActual;
+                if(document.getElementById('select-q-pisc')) document.getElementById('select-q-pisc').value = (ahora.getDate() <= 15) ? "1" : "2";
                 
                 ejecutarReportePisc();
             }
@@ -939,7 +940,8 @@
             function toggleFiltrosPisc() {
                 const tipo = document.getElementById('tipo-reporte-pisc').value;
                 ['dia', 'semana', 'quincena', 'mes'].forEach(s => {
-                    document.getElementById('section-' + s + '-pisc').style.display = (tipo === s) ? 'block' : 'none';
+                    const el = document.getElementById('section-' + s + '-pisc');
+                    if(el) el.style.display = (tipo === s) ? 'block' : 'none';
                 });
                 ejecutarReportePisc();
             }
@@ -953,11 +955,12 @@
             function ejecutarReportePisc() {
                 const tipo = document.getElementById('tipo-reporte-pisc').value;
                 const lista = document.getElementById('contenedor-reporte-pisc');
+                if(!lista) return;
                 lista.innerHTML = "<div class='empty-msg'>Cargando...</div>";
 
                 let fechaI, fechaF;
                 const infoSemana = document.getElementById('info-rango-semana-pisc');
-                infoSemana.style.display = "none";
+                if(infoSemana) infoSemana.style.display = "none";
 
                 if (tipo === 'dia') {
                     fechaI = document.getElementById('f-dia-pisc').value;
@@ -971,8 +974,10 @@
                     let domingo = new Date(new Date(lunes).setDate(lunes.getDate() + 6));
                     fechaI = lunes.toISOString().split('T')[0];
                     fechaF = domingo.toISOString().split('T')[0];
-                    infoSemana.innerHTML = `De ${formatFechaBonitaPisc(fechaI)} <br> a ${formatFechaBonitaPisc(fechaF)}`;
-                    infoSemana.style.display = "block";
+                    if(infoSemana) {
+                        infoSemana.innerHTML = `De ${formatFechaBonitaPisc(fechaI)} <br> a ${formatFechaBonitaPisc(fechaF)}`;
+                        infoSemana.style.display = "block";
+                    }
                 } 
                 else if (tipo === 'quincena') {
                     const m = document.getElementById('mes-quincena-pisc').value;
@@ -986,13 +991,15 @@
                 }
 
                 dbPisc.collection("piscinas").where("f", ">=", fechaI).where("f", "<=", fechaF).get().then(snap => {
-                    let totalesUnidades = {}; // Sumamos puntos (1 o 2)
+                    let totalesUnidades = {}; 
                     snap.forEach(doc => {
                         const d = doc.data();
-                        const mozo = d.m;
-                        // Si d.v no existe, vale 2 (entera). Si existe usa su valor real.
-                        const valor = d.v || 2; 
-                        totalesUnidades[mozo] = (totalesUnidades[mozo] || 0) + valor;
+                        if(d.m) {
+                            // LIMPIEZA DE NOMBRES PARA BRANDON/CARLOS
+                            const mozo = d.m.trim().toUpperCase(); 
+                            const valor = parseFloat(d.v || d.p || d.c || 2); 
+                            totalesUnidades[mozo] = (totalesUnidades[mozo] || 0) + valor;
+                        }
                     });
                     renderizarPisc(totalesUnidades);
                 });
@@ -1000,14 +1007,15 @@
 
             function renderizarPisc(datos) {
                 const lista = document.getElementById('contenedor-reporte-pisc');
-                const entries = Object.entries(datos).sort((a, b) => b[1] - a[1]);
+                if(!lista) return;
+                
+                const entries = Object.entries(datos).filter(e => e[0] !== "").sort((a, b) => b[1] - a[1]);
                 if (entries.length === 0) {
                     lista.innerHTML = "<div class='empty-msg'>Sin registros</div>";
                     return;
                 }
                 lista.innerHTML = "";
                 entries.forEach(item => {
-                    // Dividimos puntos entre 2 para obtener el numero de piscinas (ej: 3 puntos / 2 = 1.5)
                     const totalReal = item[1] / 2;
                     lista.innerHTML += `<div class="fila-mozo-pisc"><div class="mozo-nombre-pisc">${item[0]}</div><div class="mozo-total-pisc">${totalReal} PISCINAS</div></div>`;
                 });
@@ -1017,7 +1025,6 @@
         </script>
     </div>
 </div>
-
 
 <nav class="bottom-nav">
     <button class="nav-item active" onclick="cambiarTab('taxis', this)">
@@ -1035,7 +1042,6 @@
         <span class="nav-label">Piscinas</span>
     </button>
 </nav>
-
 
 <script>
     function cambiarTab(idSeccion, botonPresionado) {
